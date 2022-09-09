@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/pingcap/tidb-operator/cmd/backup-manager/app/constants"
@@ -98,10 +99,18 @@ func (bo *Options) deleteSnapshotsAndBackupMeta(ctx context.Context, backup *v1a
 		return err
 	}
 
+	skipAWS := false
+	for _, opt := range backup.Spec.BR.Options {
+		if strings.Contains(opt, "skip-aws") {
+			skipAWS = true
+		}
+	}
+
 	//2. delete the snapshot
-	if err = bo.deleteVolumeSnapshots(metaInfo); err != nil {
-		klog.Errorf("delete volume snapshot failure, a mannual check or delete aciton require.")
-		return err
+	if !skipAWS {
+		if err = bo.deleteVolumeSnapshots(metaInfo); err != nil {
+			return err
+		}
 	}
 
 	//3. delete the backupmeta info

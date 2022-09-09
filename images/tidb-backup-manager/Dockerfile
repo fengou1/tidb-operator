@@ -1,9 +1,14 @@
-FROM pingcap/alpine-glibc:alpine-3.14.3-gcompat
+FROM ubuntu:22.04
 ARG TARGETARCH
 ARG RCLONE_VERSION=v1.51.0
 ARG SHUSH_VERSION=v1.4.0
 ARG TOOLKIT_VERSION=v6.1.0
-RUN apk update && apk add ca-certificates wget unzip bind-tools --no-cache && rm -rf /var/cache/apk/*
+RUN apt update && apt install wget curl jq unzip -y && apt clean
+
+RUN curl -LO https://dl.k8s.io/release/v1.22.4/bin/linux/amd64/kubectl  \
+    && chmod +x kubectl && mv kubectl /usr/local/bin/kubectl
+COPY create-snapshot.sh /usr/local/bin/create-snapshot.sh
+COPY install-snapshot.sh /usr/local/bin/install-snapshot.sh
 
 RUN wget -nv https://github.com/ncw/rclone/releases/download/${RCLONE_VERSION}/rclone-${RCLONE_VERSION}-linux-${TARGETARCH}.zip \
   && unzip rclone-${RCLONE_VERSION}-linux-${TARGETARCH}.zip \
@@ -17,15 +22,15 @@ RUN wget -nv https://github.com/realestate-com-au/shush/releases/download/${SHUS
 
 ARG TOOLKIT_NAME=${TOOLKIT_VERSION}-linux-${TARGETARCH}
 ARG TOOLKIT_PKG_NAME=tidb-community-toolkit-${TOOLKIT_NAME}
-RUN \
-  wget -nv https://download.pingcap.org/${TOOLKIT_PKG_NAME}.tar.gz \
-  && tar -xzf ${TOOLKIT_PKG_NAME}.tar.gz \
-  && tar -xzf ${TOOLKIT_PKG_NAME}/tidb-lightning-${TOOLKIT_NAME}.tar.gz && mv tidb-lightning /tidb-lightning \
-  && mv ${TOOLKIT_PKG_NAME}/tidb-lightning-ctl /tidb-lightning-ctl \
-  && tar -xzf ${TOOLKIT_PKG_NAME}/dumpling-${TOOLKIT_NAME}.tar.gz && mv dumpling /dumpling \
-  && chmod 755 /dumpling /tidb-lightning /tidb-lightning-ctl \
-  && rm -rf ${TOOLKIT_PKG_NAME}.tar.gz \
-  && rm -rf ${TOOLKIT_PKG_NAME}
+#RUN \
+#  wget -nv https://download.pingcap.org/${TOOLKIT_PKG_NAME}.tar.gz \
+#  && tar -xzf ${TOOLKIT_PKG_NAME}.tar.gz \
+#  && tar -xzf ${TOOLKIT_PKG_NAME}/tidb-lightning-${TOOLKIT_NAME}.tar.gz && mv tidb-lightning /tidb-lightning \
+#  && mv ${TOOLKIT_PKG_NAME}/tidb-lightning-ctl /tidb-lightning-ctl \
+#  && tar -xzf ${TOOLKIT_PKG_NAME}/dumpling-${TOOLKIT_NAME}.tar.gz && mv dumpling /dumpling \
+#  && chmod 755 /dumpling /tidb-lightning /tidb-lightning-ctl \
+#  && rm -rf ${TOOLKIT_PKG_NAME}.tar.gz \
+#  && rm -rf ${TOOLKIT_PKG_NAME}
 
 COPY bin/${TARGETARCH}/tidb-backup-manager /tidb-backup-manager
 COPY entrypoint.sh /entrypoint.sh
